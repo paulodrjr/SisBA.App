@@ -1,0 +1,98 @@
+import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:network_info_plus/network_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:wifi_scan/wifi_scan.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text('Multiple Lists with Cards'),
+        ),
+        body: ListsWithCards(),
+      ),
+    );
+  }
+}
+
+class ListsWithCards extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Item>>(
+      future: fetchItems(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(child: Text('No items found'));
+        } else {
+          final items = snapshot.data!;
+          return ListView.builder(
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              return Card(
+                margin: EdgeInsets.all(10.0),
+                child: ListTile(
+                  leading: Image.asset('assets/images/fan.png'), // Substitua pelo caminho da sua imagem
+                  title: Text(items[index].title),
+                  subtitle: Text(items[index].address),
+                ),
+              );
+            },
+          );
+        }
+      },
+    );
+  }
+
+  Future<List<Item>> fetchItems() async {
+    await requestPermission();
+    final String wifiInfo = await getWifiInfo();
+    // Simulando a obtenção de dados, substitua esta função para obter dados reais
+    return [
+      Item(title: 'Item 1', address: wifiInfo),
+      Item(title: 'Item 2', address: 'Address 2'),
+      Item(title: 'Item 3', address: 'Address 3'),
+      Item(title: 'Item 4', address: 'Address 4'),
+      Item(title: 'Item 5', address: 'Address 5'),
+    ];
+  }
+
+  Future<void> requestPermission() async {
+    final permission = Permission.locationWhenInUse;
+
+    if (await permission.isDenied) {
+      await permission.request();
+    }
+  }
+
+  Future<String> getWifiInfo() async {
+    
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult == ConnectivityResult.wifi) {
+      // Get the current Wi-Fi network's SSID
+      final String? ssid = await NetworkInfo().getWifiName();
+      return 'SSID: $ssid';
+    } else {
+      return 'Device is not connected to Wi-Fi';
+    }
+  }
+  
+}
+
+class Item {
+  final String title;
+  final String address;
+
+  Item({required this.title, required this.address});
+}
