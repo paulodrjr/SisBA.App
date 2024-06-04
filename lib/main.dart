@@ -43,7 +43,6 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-
   Future<void> _scanAndFetchResults(BuildContext context) async {
     if (isScanning) {
       kShowSnackBar(context, "Scan already in progress");
@@ -53,13 +52,13 @@ class _MyAppState extends State<MyApp> {
     if (!await Permission.location.request().isGranted) {
       _showSnackBar(context, "Permissão de localização negada");
       return;
-    } 
+    }
 
     setState(() {
       isScanning = true;
     });
 
-    try {      
+    try {
       WiFiForIoTPlugin.getSSID().then((value) => currentSSID = value!);
       // Check if "can" startScan
       if (shouldCheckCan) {
@@ -91,7 +90,8 @@ class _MyAppState extends State<MyApp> {
       if (shouldCheckCan) {
         final can = await WiFiScan.instance.canGetScannedResults();
         if (can != CanGetScannedResults.yes) {
-          if (mounted) kShowSnackBar(context, "Cannot get scanned results: $can");
+          if (mounted)
+            kShowSnackBar(context, "Cannot get scanned results: $can");
           setState(() {
             accessPoints = <WiFiAccessPoint>[];
             isScanning = false;
@@ -103,9 +103,12 @@ class _MyAppState extends State<MyApp> {
       // Get scanned results
       final results = await WiFiScan.instance.getScannedResults();
       setState(() {
-        accessPoints = ssidPrefix != '' ? results
-          .where((ap) => ap.ssid.startsWith(ssidPrefix)) // Filtrar por SSID
-          .toList() : results;
+        accessPoints = ssidPrefix != ''
+            ? results
+                .where(
+                    (ap) => ap.ssid.startsWith(ssidPrefix)) // Filtrar por SSID
+                .toList()
+            : results;
       });
     } catch (e) {
       kShowSnackBar(context, "Error occurred: $e");
@@ -133,8 +136,12 @@ class _MyAppState extends State<MyApp> {
                 Center(
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.perm_scan_wifi),
-                    label: isScanning ? const Text('Scaneando...') : const Text('Escanear Wi-Fi'),
-                    onPressed: isScanning ? null : () async => _scanAndFetchResults(context),
+                    label: isScanning
+                        ? const Text('Scaneando...')
+                        : const Text('Escanear Wi-Fi'),
+                    onPressed: isScanning
+                        ? null
+                        : () async => _scanAndFetchResults(context),
                   ),
                 ),
                 const Divider(),
@@ -168,7 +175,8 @@ class _MyAppState extends State<MyApp> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(accessPoint.ssid.isNotEmpty ? accessPoint.ssid : "**EMPTY**"),
+        title:
+            Text(accessPoint.ssid.isNotEmpty ? accessPoint.ssid : "**EMPTY**"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -177,11 +185,14 @@ class _MyAppState extends State<MyApp> {
             _buildInfo("Frequency", "${accessPoint.frequency}MHz"),
             _buildInfo("Level", accessPoint.level),
             _buildInfo("Standard", accessPoint.standard),
-            _buildInfo("Center Frequency 0", "${accessPoint.centerFrequency0}MHz"),
-            _buildInfo("Center Frequency 1", "${accessPoint.centerFrequency1}MHz"),
+            _buildInfo(
+                "Center Frequency 0", "${accessPoint.centerFrequency0}MHz"),
+            _buildInfo(
+                "Center Frequency 1", "${accessPoint.centerFrequency1}MHz"),
             _buildInfo("Channel Width", accessPoint.channelWidth),
             _buildInfo("Is Passpoint", accessPoint.isPasspoint),
-            _buildInfo("Operator Friendly Name", accessPoint.operatorFriendlyName),
+            _buildInfo(
+                "Operator Friendly Name", accessPoint.operatorFriendlyName),
             _buildInfo("Venue Name", accessPoint.venueName),
             _buildInfo("Is 802.11mc Responder", accessPoint.is80211mcResponder),
           ],
@@ -215,7 +226,12 @@ class _AccessPointTile extends StatelessWidget {
   final BuildContext parentContext;
   final List<WiFiAccessPoint> accessPoints;
 
-  const _AccessPointTile({Key? key, required this.accessPoint, required this.accessPoints, required this.onTap, required this.parentContext})
+  const _AccessPointTile(
+      {Key? key,
+      required this.accessPoint,
+      required this.accessPoints,
+      required this.onTap,
+      required this.parentContext})
       : super(key: key);
 
   @override
@@ -235,7 +251,8 @@ class _AccessPointTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title),
-                Text(accessPoint.capabilities, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(accessPoint.capabilities,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
               ],
             ),
           ),
@@ -243,9 +260,8 @@ class _AccessPointTile extends StatelessWidget {
             onPressed: () {
               _canConnectWithCurrentSSID().then((value) {
                 if (value) _showPasswordDialog(parentContext, accessPoint);
-              });              
+              });
               //_showPasswordDialog(parentContext, accessPoint);
-              
             },
             child: const Text('Configurar'),
           ),
@@ -278,10 +294,11 @@ class _AccessPointTile extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              _connectToNetwork(parentContext, accessPoint.ssid, passwordController.text);
+              _connectToNetwork(
+                  parentContext, accessPoint.ssid, passwordController.text);
             },
-            child: const Text('Ok'),            
-          ),          
+            child: const Text('Ok'),
+          ),
         ],
       ),
     );
@@ -292,13 +309,14 @@ class _AccessPointTile extends StatelessWidget {
     String? currSSID = await info.getWifiName();
 
     if (currSSID == null) {
-      _showSnackBar(parentContext, "Não foi possível obter o SSID da rede atual");
+      _showSnackBar(
+          parentContext, "Não foi possível obter o SSID da rede atual");
       return false;
     }
 
     //replace "" with "
     currSSID = currSSID.replaceAll("\"", "");
-    
+
     WiFiAccessPoint? currentAccessPoint;
     //for each access point in accessPoints, if the ssid matches the ssid of the access point we want to connect to, set currentAccessPoint to that access point
     for (int i = 0; i < accessPoints.length; i++) {
@@ -306,18 +324,18 @@ class _AccessPointTile extends StatelessWidget {
         currentAccessPoint = accessPoints[i];
       }
     }
-    
-    if (currentAccessPoint != null && currentAccessPoint.frequency > 3000){
-      _showSnackBar(parentContext, "O aparelho está conectado a uma rede de 5GHz. Por favor, conecte a uma rede de 2.4GHz para continuar.");
+
+    if (currentAccessPoint != null && currentAccessPoint.frequency > 3000) {
+      _showSnackBar(parentContext,
+          "O aparelho está conectado a uma rede de 5GHz. Por favor, conecte a uma rede de 2.4GHz para continuar.");
       return false;
     }
 
     return true;
   }
 
-
-  Future<void> _connectToNetwork(BuildContext context, String ssid, String password) async {    
-    
+  Future<void> _connectToNetwork(
+      BuildContext context, String ssid, String password) async {
     final info = NetworkInfo();
     String? currSSID = await info.getWifiName();
 
@@ -325,7 +343,6 @@ class _AccessPointTile extends StatelessWidget {
 
     // Solicitar permissão de localização em tempo de execução
     if (await Permission.location.request().isGranted) {
-
       // Desconectar do Wi-Fi atual antes de tentar conectar-se a um novo Wi-Fi
       try {
         await WiFiForIoTPlugin.disconnect();
@@ -339,13 +356,14 @@ class _AccessPointTile extends StatelessWidget {
         String deviceIP = await connect(ssid, "ba%23Aa4");
         // result = "Router IP Address 1: $result";
         // print(result);
-        
+
         // Get the device's IP address after successful connection
         // final deviceIpAddress = await WiFiForIoTPlugin.getIP();
         // print(_getRouterIpAddress(deviceIpAddress!));
 
         // result += "\nRouter IP Address 2: ${_getRouterIpAddress(deviceIpAddress)}";
-        _showSnackBar(parentContext, "Conectado com sucesso à rede Wi-Fi: $deviceIP");
+        _showSnackBar(
+            parentContext, "Conectado com sucesso à rede Wi-Fi: $deviceIP");
 
         final http.Response response = await http.post(
           Uri.parse('http://BasicoAroma/Configuracao'),
@@ -358,22 +376,26 @@ class _AccessPointTile extends StatelessWidget {
           //remove the network from the list of available networks
           accessPoints.removeWhere((element) => element.ssid == ssid);
         } else {
-          _showSnackBar(parentContext, 'Falha ao enviar a configuração. Código de status: ${response.statusCode}');
+          _showSnackBar(parentContext,
+              'Falha ao enviar a configuração. Código de status: ${response.statusCode}');
         }
-
       } catch (e) {
         _showSnackBar(parentContext, 'Erro ao conectar à rede Wi-Fi: $e');
         return;
       }
-      
-    }else{
+    } else {
       _showSnackBar(parentContext, "Permissão de localização negada");
     }
   }
 
   Future<String> connect(String ssid, String pwd) async {
     try {
-      bool result = await WiFiForIoTPlugin.connect(ssid, withInternet: false, security: NetworkSecurity.WPA, password: pwd, );
+      bool result = await WiFiForIoTPlugin.connect(
+        ssid,
+        withInternet: false,
+        security: NetworkSecurity.WPA,
+        password: pwd,
+      );
       print("connecting");
       if (result) {
         WiFiForIoTPlugin.forceWifiUsage(true);
@@ -388,12 +410,12 @@ class _AccessPointTile extends StatelessWidget {
 }
 
 void _showSnackBar(BuildContext context, String message) {
-    if (context != null && ScaffoldMessenger.of(context).mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    }
+  if (context != null && ScaffoldMessenger.of(context).mounted) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
+}
 
 // Function to extract router's IP address from device's IP address
 String _getRouterIpAddress(String deviceIpAddress) {
@@ -402,7 +424,6 @@ String _getRouterIpAddress(String deviceIpAddress) {
   parts[3] = '1';
   return parts.join('.');
 }
-
 
 /// Show snackbar.
 void kShowSnackBar(BuildContext context, String message) {
