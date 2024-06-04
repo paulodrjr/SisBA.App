@@ -32,7 +32,9 @@ dependencies:
     sdk: flutter
   connectivity_plus: ^6.0.3
   network_info_plus: ^5.0.3  
-  wifi_scan: 
+  wifi_scan:
+  wifi_iot: ^0.3.19 
+  http:
 
 
   # The following adds the Cupertino Icons font to your application.
