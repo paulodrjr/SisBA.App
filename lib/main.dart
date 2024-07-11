@@ -27,7 +27,7 @@ class _MyAppState extends State<MyApp> {
   bool isScanning = false;
   bool shouldCheckCan = true;
   String? routerIpAddress;
-  final String ssidPrefix = '';
+  final String ssidPrefix = 'BAAD_';
 
   @override
   void initState() {
@@ -274,34 +274,42 @@ class _AccessPointTile extends StatelessWidget {
   void _showPasswordDialog(BuildContext context, WiFiAccessPoint accessPoint) {
     final TextEditingController passwordController = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Informe a senha da rede ATUAL'),
-        content: TextField(
-          controller: passwordController,
-          decoration: const InputDecoration(
-            labelText: 'Senha',
-            border: OutlineInputBorder(),
+    final info = NetworkInfo();
+    
+    info.getWifiName().then((value) {
+      String? currSSID;
+
+      currSSID = value;    
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Informe a senha da rede ATUAL ($currSSID), à qual o dispositivo deverá se conectar.'),
+          content: TextField(
+            controller: passwordController,
+            decoration: const InputDecoration(
+              labelText: 'Senha',
+              border: OutlineInputBorder(),
+            ),
+            obscureText: true,
           ),
-          obscureText: true,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _connectToNetwork(
+                    parentContext, accessPoint.ssid, passwordController.text);
+              },
+              child: const Text('Ok'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _connectToNetwork(
-                  parentContext, accessPoint.ssid, passwordController.text);
-            },
-            child: const Text('Ok'),
-          ),
-        ],
-      ),
-    );
+      );
+    });
   }
 
   Future<bool> _canConnectWithCurrentSSID() async {
@@ -309,8 +317,8 @@ class _AccessPointTile extends StatelessWidget {
     String? currSSID = await info.getWifiName();
 
     if (currSSID == null) {
-      _showSnackBar(
-          parentContext, "Não foi possível obter o SSID da rede atual");
+      _showErrorDialog(
+          parentContext, "Erro", "Não foi possível obter o SSID da rede atual");
       return false;
     }
 
@@ -326,12 +334,30 @@ class _AccessPointTile extends StatelessWidget {
     }
 
     if (currentAccessPoint != null && currentAccessPoint.frequency > 3000) {
-      _showSnackBar(parentContext,
+      _showErrorDialog(
+          parentContext,
+          "Erro de Frequência",
           "O aparelho está conectado a uma rede de 5GHz. Por favor, conecte a uma rede de 2.4GHz para continuar.");
       return false;
     }
 
     return true;
+  }
+
+  void _showErrorDialog(BuildContext context, String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Ok'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _connectToNetwork(
@@ -353,20 +379,23 @@ class _AccessPointTile extends StatelessWidget {
 
       // Connect to Wi-Fi network
       try {
-        String deviceIP = await connect(ssid, "ba%23Aa4");
-        // result = "Router IP Address 1: $result";
-        // print(result);
+        bool connected = await connect(ssid, "ba%23Aa4");
+        
+        if (!connected) {
+          _showSnackBar(parentContext, 'Erro ao conectar à rede Wi-Fi');
+          return;
+        }
 
         // Get the device's IP address after successful connection
-        // final deviceIpAddress = await WiFiForIoTPlugin.getIP();
+        final deviceIpAddress = await WiFiForIoTPlugin.getIP();
         // print(_getRouterIpAddress(deviceIpAddress!));
 
         // result += "\nRouter IP Address 2: ${_getRouterIpAddress(deviceIpAddress)}";
         _showSnackBar(
-            parentContext, "Conectado com sucesso à rede Wi-Fi: $deviceIP");
+            parentContext, "Conectado com sucesso à rede Wi-Fi: $WiFiForIoTPlugin.GetSSID()");
 
         final http.Response response = await http.post(
-          Uri.parse('http://BasicoAroma/Configuracao'),
+          Uri.parse('http://192.168.4.1/Configuracao'),
           body: json,
         );
 
@@ -388,7 +417,7 @@ class _AccessPointTile extends StatelessWidget {
     }
   }
 
-  Future<String> connect(String ssid, String pwd) async {
+  Future<bool> connect(String ssid, String pwd) async {
     try {
       bool result = await WiFiForIoTPlugin.connect(
         ssid,
@@ -399,9 +428,9 @@ class _AccessPointTile extends StatelessWidget {
       print("connecting");
       if (result) {
         WiFiForIoTPlugin.forceWifiUsage(true);
-        return "Successfully connected to $ssid (IP: ${await WiFiForIoTPlugin.getIP()})";
+        return true;
       } else {
-        return "There was an error connecting to that wifi!";
+        return false;
       }
     } catch (e) {
       throw Exception(e);
