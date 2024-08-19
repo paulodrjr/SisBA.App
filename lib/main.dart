@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:wifi_scan/wifi_scan.dart';
 import 'package:wifi_iot/wifi_iot.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -103,12 +104,12 @@ class _MyAppState extends State<MyApp> {
       // Get scanned results
       final results = await WiFiScan.instance.getScannedResults();
       setState(() {
-        accessPoints = ssidPrefix != ''
+        accessPoints = results;/*ssidPrefix != ''
             ? results
                 .where(
                     (ap) => ap.ssid.startsWith(ssidPrefix)) // Filtrar por SSID
                 .toList()
-            : results;
+            : results;*/
       });
     } catch (e) {
       kShowSnackBar(context, "Error occurred: $e");
@@ -150,13 +151,20 @@ class _MyAppState extends State<MyApp> {
                     child: accessPoints.isEmpty
                         ? const Text("NO SCANNED RESULTS")
                         : ListView.separated(
-                            itemCount: accessPoints.length,
-                            itemBuilder: (context, i) => _AccessPointTile(
-                              accessPoint: accessPoints[i],
-                              accessPoints: accessPoints,
-                              onTap: () => _handleTap(context, accessPoints[i]),
-                              parentContext: context,
-                            ),
+                            itemCount: ssidPrefix != ''
+                              ? accessPoints.where((ap) => ap.ssid.startsWith(ssidPrefix)).toList().length
+                              : accessPoints.length,
+                            itemBuilder: (context, i) {
+                              final filteredAccessPoints = ssidPrefix != ''
+                                  ? accessPoints.where((ap) => ap.ssid.startsWith(ssidPrefix)).toList()
+                                  : accessPoints;
+                              return _AccessPointTile(
+                                accessPoint: filteredAccessPoints[i],
+                                accessPoints: accessPoints,
+                                onTap: () => _handleTap(context, filteredAccessPoints[i]),
+                                parentContext: context,
+                              );
+                            },
                             separatorBuilder: (context, index) => const Divider(
                               color: Colors.grey,
                             ),
@@ -337,7 +345,7 @@ class _AccessPointTile extends StatelessWidget {
       _showErrorDialog(
           parentContext,
           "Erro de Frequência",
-          "O aparelho está conectado a uma rede de 5GHz. Por favor, conecte a uma rede de 2.4GHz para continuar.");
+          "Este aparelho celular está conectado a uma rede de 5GHz. Por favor, conecte a uma rede de 2.4GHz para continuar.");
       return false;
     }
 
@@ -365,7 +373,8 @@ class _AccessPointTile extends StatelessWidget {
     final info = NetworkInfo();
     String? currSSID = await info.getWifiName();
 
-    String json = '{"ssid":"$currSSID","password":"$password"}';
+    String json = '{"ssid":"$currSSID","password":"$password"}';       
+    Clipboard.setData(ClipboardData(text: json));
 
     // Solicitar permissão de localização em tempo de execução
     if (await Permission.location.request().isGranted) {
@@ -387,7 +396,7 @@ class _AccessPointTile extends StatelessWidget {
         }
 
         // Get the device's IP address after successful connection
-        final deviceIpAddress = await WiFiForIoTPlugin.getIP();
+        //final deviceIpAddress = await WiFiForIoTPlugin.getIP();
         // print(_getRouterIpAddress(deviceIpAddress!));
 
         // result += "\nRouter IP Address 2: ${_getRouterIpAddress(deviceIpAddress)}";
@@ -402,8 +411,11 @@ class _AccessPointTile extends StatelessWidget {
         if (response.statusCode == 200) {
           _showSnackBar(parentContext, 'Configuração enviada com sucesso!');
           await WiFiForIoTPlugin.disconnect();
+          //reconnect to the original network
+          //String currentSSID = currSSID!;
+          //bool connected = await connect(currentSSID, password);
           //remove the network from the list of available networks
-          accessPoints.removeWhere((element) => element.ssid == ssid);
+          //accessPoints.removeWhere((element) => element.ssid == ssid);
         } else {
           _showSnackBar(parentContext,
               'Falha ao enviar a configuração. Código de status: ${response.statusCode}');
