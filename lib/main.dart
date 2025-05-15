@@ -104,7 +104,8 @@ class _MyAppState extends State<MyApp> {
       // Get scanned results
       final results = await WiFiScan.instance.getScannedResults();
       setState(() {
-        accessPoints = results;/*ssidPrefix != ''
+        accessPoints =
+            results; /*ssidPrefix != ''
             ? results
                 .where(
                     (ap) => ap.ssid.startsWith(ssidPrefix)) // Filtrar por SSID
@@ -152,16 +153,24 @@ class _MyAppState extends State<MyApp> {
                         ? const Text("NO SCANNED RESULTS")
                         : ListView.separated(
                             itemCount: ssidPrefix != ''
-                              ? accessPoints.where((ap) => ap.ssid.startsWith(ssidPrefix)).toList().length
-                              : accessPoints.length,
+                                ? accessPoints
+                                    .where(
+                                        (ap) => ap.ssid.startsWith(ssidPrefix))
+                                    .toList()
+                                    .length
+                                : accessPoints.length,
                             itemBuilder: (context, i) {
                               final filteredAccessPoints = ssidPrefix != ''
-                                  ? accessPoints.where((ap) => ap.ssid.startsWith(ssidPrefix)).toList()
+                                  ? accessPoints
+                                      .where((ap) =>
+                                          ap.ssid.startsWith(ssidPrefix))
+                                      .toList()
                                   : accessPoints;
                               return _AccessPointTile(
                                 accessPoint: filteredAccessPoints[i],
                                 accessPoints: accessPoints,
-                                onTap: () => _handleTap(context, filteredAccessPoints[i]),
+                                onTap: () => _handleTap(
+                                    context, filteredAccessPoints[i]),
                                 parentContext: context,
                               );
                             },
@@ -279,20 +288,42 @@ class _AccessPointTile extends StatelessWidget {
     );
   }
 
+  // Função para exibir o AlertDialog
+  void _showSuccessDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Sucesso'),
+          content: Text('Configuração enviada com sucesso!'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Ok'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showPasswordDialog(BuildContext context, WiFiAccessPoint accessPoint) {
     final TextEditingController passwordController = TextEditingController();
 
     final info = NetworkInfo();
-    
+
     info.getWifiName().then((value) {
       String? currSSID;
 
-      currSSID = value;    
+      currSSID = value;
 
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Informe a senha da rede ATUAL ($currSSID), à qual o dispositivo deverá se conectar.'),
+          title: Text(
+              'Informe a senha da rede ATUAL ($currSSID), à qual o dispositivo deverá se conectar.'),
           content: TextField(
             controller: passwordController,
             decoration: const InputDecoration(
@@ -342,9 +373,7 @@ class _AccessPointTile extends StatelessWidget {
     }
 
     if (currentAccessPoint != null && currentAccessPoint.frequency > 3000) {
-      _showErrorDialog(
-          parentContext,
-          "Erro de Frequência",
+      _showErrorDialog(parentContext, "Erro de Frequência",
           "Este aparelho celular está conectado a uma rede de 5GHz. Por favor, conecte a uma rede de 2.4GHz para continuar.");
       return false;
     }
@@ -373,7 +402,11 @@ class _AccessPointTile extends StatelessWidget {
     final info = NetworkInfo();
     String? currSSID = await info.getWifiName();
 
-    String json = '{"ssid":"$currSSID","password":"$password"}';       
+    if (currSSID != null) {
+      currSSID = currSSID.replaceAll('"', '');
+    }
+
+    String json = '{"ssid":"$currSSID","password":"$password", "mqtt":"x82129a1.ala.us-east-1.emqxsl.com", "user":"bauser", "pwd":"qCqbLyex58Z6xpp"}';
     Clipboard.setData(ClipboardData(text: json));
 
     // Solicitar permissão de localização em tempo de execução
@@ -389,7 +422,7 @@ class _AccessPointTile extends StatelessWidget {
       // Connect to Wi-Fi network
       try {
         bool connected = await connect(ssid, "ba%23Aa4");
-        
+
         if (!connected) {
           _showSnackBar(parentContext, 'Erro ao conectar à rede Wi-Fi');
           return;
@@ -400,8 +433,8 @@ class _AccessPointTile extends StatelessWidget {
         // print(_getRouterIpAddress(deviceIpAddress!));
 
         // result += "\nRouter IP Address 2: ${_getRouterIpAddress(deviceIpAddress)}";
-        _showSnackBar(
-            parentContext, "Conectado com sucesso à rede Wi-Fi: $WiFiForIoTPlugin.GetSSID()");
+        _showSnackBar(parentContext,
+            "Conectado com sucesso à rede Wi-Fi: $WiFiForIoTPlugin.GetSSID()");
 
         final http.Response response = await http.post(
           Uri.parse('http://192.168.4.1/Configuracao'),
@@ -409,11 +442,12 @@ class _AccessPointTile extends StatelessWidget {
         );
 
         if (response.statusCode == 200) {
-          _showSnackBar(parentContext, 'Configuração enviada com sucesso!');
+          _showSuccessDialog(parentContext);
+          //_showSnackBar(parentContext, 'Configuração enviada com sucesso!');
           await WiFiForIoTPlugin.disconnect();
           //reconnect to the original network
           //String currentSSID = currSSID!;
-          //bool connected = await connect(currentSSID, password);
+          //bool connected = await connect(currSSID!, password);
           //remove the network from the list of available networks
           //accessPoints.removeWhere((element) => element.ssid == ssid);
         } else {
